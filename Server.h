@@ -8,31 +8,43 @@
 #ifndef SERVER_SERVER_H_
 #define SERVER_SERVER_H_
 #include <iostream>
-#include <map>
 #include <string>
 #include <process.h>
-#include <winsock.h>
+#include <wtypes.h>
+#include <winbase.h>
+#include "server_names.h"
 #include "Request.h"
-enum {WSA_OK=0,VERSION_LOW = 2,VERSION_HIGH = 2};
+enum {MAX_REQ_NUM=10};
+
+
+typedef struct {
+	uint32_t width, height;
+	uint8_t type;
+	char fname_in[MAX_PATH],fname_out[MAX_PATH];
+}RequestData;
 class Server {
 public:
-	Server();
 	virtual ~Server();
-	void startServer();
 	static unsigned WINAPI runServer(void* p);
-	static unsigned WINAPI runRequest(void* ptr);
-	static std::map<int,std::wstring> makeInitMsgMap();
-	static std::map<int,std::wstring> makeDeinitMsgMap();
-	static void outputErrorResult(int code, std::map<int,std::wstring> msgMap);
-//	static bool inited;
-private:
-
 	unsigned runThisServer();
-	std::map<int,std::wstring> makeBindMsgMap();
-
-	std::map<int,std::wstring> makeListenMsgMap();
-	std::map<int,std::wstring> makeAcceptMsgMap();
-	SOCKET listen_sock;
+	static Server& getServer();
+	void static startServer();
+	void static stopServer();
+	void stopThisServer();
+//	static unsigned WINAPI runRequest(void* ptr);
+private:
+	Server();
+	Server(const Server&) = delete;
+	Server& operator =(const Server& ) = delete;
+	BOOL inited;
+	BOOL createEvent(HANDLE& event, BOOL manualReset, BOOL initialState, const std::string& name, const std::string msg);
+	BOOL createMutex(HANDLE& mutex, BOOL initialOwner, const std::string& name, const std::string& msg);
+	void outputMsg(const std::string&msg, BOOL result);
+	LPSTR buf;
+	HANDLE fileInput,reqFlag,endFlag,reqEnabledFlag;
+	HANDLE requestMutex;
 };
-void __declspec(dllexport) startServer();
+
+extern "C" __declspec(dllexport) void  startServer();
+extern "C" __declspec(dllexport) void  stopServer();
 #endif /* SERVER_SERVER_H_ */

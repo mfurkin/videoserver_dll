@@ -7,54 +7,63 @@
 // #include <iostream>
 
 #include "Server.h"
-enum {PORT_NUM=49001,QUEUE_SIZE=5};
+// #include "server_names.h"
 Server::Server() {
-
-
-	std::map<int,std::wstring> bindMsgMap = makeBindMsgMap();
-
-	listen_sock = socket(PF_INET,SOCK_STREAM,0);
-	if (listen_sock == INVALID_SOCKET)
-		std::wcout<<L"socket have not been created successfully.\n";
+	size_t size = MAX_PATH*MAX_REQ_NUM;
+	inited = FALSE;
+	fileInput = CreateFileMapping(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,REQ_FILE_NAME.c_str());
+	if (fileInput == NULL)
+		std::wcerr<<L"File mapping could not be created error code="<<GetLastError()<<"\n";
 	else {
-		SOCKADDR_IN addr;
-
-		addr.sin_addr.S_un.S_addr = INADDR_ANY;
-		addr.sin_port = htons(PORT_NUM);
-		addr.sin_family = AF_INET;
-		int result = bind(listen_sock, (struct sockaddr*)&addr, sizeof(addr));
-		if (result !=0)
-			outputErrorResult(result,bindMsgMap);
-		else {
-			std::wcout<<L"Socket have been binded successfully\n";
-			_beginthreadex(NULL,0,runServer,this,0,NULL);
-		}
+			buf = (LPSTR)MapViewOfFile(fileInput,FILE_MAP_ALL_ACCESS,0,0,size);
+			memset(buf,0,size);
+			if (buf == NULL)
+				std::wcerr<<L"Shared memory could not be created error code="<<GetLastError()<<"\n";
+			else {
+					reqFlag = CreateEvent(NULL,FALSE,FALSE,REQ_FLAG_NAME.c_str());
+					endFlag = CreateEvent(NULL,FALSE,FALSE,NULL);
+					reqEnabledFlag = CreateEvent(NULL,FALSE,TRUE,REQ_ENABLED_FLAG.c_str());
+					requestMutex = CreateMutex(NULL,TRUE,REQ_MUTEX_NAME.c_str());
+					inited = createEvent(reqFlag,FALSE,FALSE,REQ_FLAG_NAME,REQ_FLAG_CREATING_MSG) ||
+							 createEvent(endFlag,FALSE,FALSE,NULL,END_FLAG_CREATING_MSG) ||
+							 createEvent(reqEnabledFlag,FALSE,TRUE,REQ_ENABLED_FLAG,REQ_ENABLED_FLAG_CREATING_MSG) ||
+							 createMutex(requestMutex,TRUE,REQ_MUTEX_NAME,REQ_MUTEX_CREATING_MSG);
+					if (inited) {
+						Request::setEndFlag(endFlag);
+						Request::initConverters();
+						std::wcerr<<L"Server have been run successfully\n";
+					}
+			}
 	}
 }
 
-Server::~Server() {
-	shutdown(listen_sock,2);
-}
-
-void Server::startServer() {
-
-}
-
-void Server::outputErrorResult(int code, std::map<int,std::wstring> msgMap) {
-
-	std::wstring st = (msgMap.count(code)) ? msgMap[code] : L"Unknown issue";
-	std::wcout<<st<<'\n';
-}
-
-std::map<int, std::wstring> Server::makeBindMsgMap() {
-	std::map<int,std::wstring> result = std::map<int,std::wstring>();
-	result[WSAEBADF] = std::wstring(L"The socket argument is not a valid file descriptor.");
-	result[WSAENOTSOCK] = std::wstring(L"The descriptor socket is not a socket.");
-	result[WSAEADDRNOTAVAIL] = std::wstring(L"The specified address is not available on this machine.");
-	result[WSAEADDRINUSE] = std::wstring(L"Some other socket is already using the specified address.");
-	result[WSAEINVAL] = std::wstring(L"The socket socket already has an address.");
-	result[WSAEACCES] = std::wstring(L"You do not have permission to access the requested address.");
+BOOL Server::createEvent(HANDLE& event, BOOL manualReset, BOOL initialState, const std::string& name, const std::string msg) {
+	BOOL result;
+	event = CreateEvent(NULL, manualReset, initialState, name.c_str());
+	result = (event != NULL);
+	outputMsg(msg,result);
 	return result;
+}
+
+BOOL Server::createMutex(HANDLE& mutex, BOOL initialOwner, const std::string& name, const std::string& msg) {
+	BOOL result;
+	mutex = CreateMutex(NULL,TRUE,name.c_str());
+	result = (mutex != NULL);
+	outputMsg(msg,result);
+	return result;
+}
+
+void Server::outputMsg(const std::string& msg, BOOL result) {
+	if  (!(result))
+		std::cerr<<msg.c_str()<<" error code = "<<GetLastError()<<"\n";
+}
+
+Server::~Server() {
+	CloseHandle(fileInput);
+	CloseHandle(reqFlag);
+	CloseHandle(endFlag);
+	CloseHandle(reqEnabledFlag);
+	CloseHandle(requestMutex);
 }
 
 unsigned Server::runServer(void* p) {
@@ -63,67 +72,56 @@ unsigned Server::runServer(void* p) {
 }
 
 unsigned Server::runThisServer() {
-	std::map<int,std::wstring> listenMsgMap = makeListenMsgMap();
-	int result = listen(listen_sock,QUEUE_SIZE),res2 = 0;
-	if (result)
-		outputErrorResult(errno,listenMsgMap);
-	else {
-		std::map<int,std::wstring> acceptMsgMap = makeAcceptMsgMap();
-		struct sockaddr addrinfo;
-		int addrlen;
-		std::wcout<<"Listening completed successfully\n";
-		for(;;) {
-			SOCKET clSocket  = accept(listen_sock,&addrinfo,&addrlen);
-			if (clSocket == INVALID_SOCKET)
-				outputErrorResult(errno,acceptMsgMap);
-			else{
-				Request request = Request(clSocket);
-				_beginthreadex(NULL,0,runRequest,&request,0,NULL);
-			}
+	unsigned res2 = 0;
+	std::wcerr<<"runThisServer enter\n";
+	HANDLE events[2];
+	events[0] = reqFlag;
+	events[1] = endFlag;
+	unsigned long result,res3;
+	std::string reqName,reqPingName;
+	for(;(result=WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,FALSE)) && (result == WAIT_OBJECT_0);) {
+		res3 = WaitForSingleObjectEx(requestMutex,INFINITE,TRUE);
+		if (res3 == WAIT_IO_COMPLETION) {
+			reqName = std::string(buf);
+			Request* req_ptr = new Request(reqName);
+			_beginthreadex(NULL,0,Request::runRequest,req_ptr,0,NULL);
+			SetEvent(reqEnabledFlag);
+			ReleaseMutex(requestMutex);
 		}
 	}
+	std::wcerr<<"runThisServer exit\n";
 	return res2;
 }
-
-std::map<int, std::wstring> Server::makeInitMsgMap() {
-	std::map<int,std::wstring> result = std::map<int,std::wstring>();
-	result[WSASYSNOTREADY] = std::wstring(L"Init error: The underlying network subsystem is not ready for network communication.");
-	result[WSAVERNOTSUPPORTED] = std::wstring(L"Init error: The version of Windows Sockets support requested is not provided by this particular Windows Sockets implementation.");
-	result[WSAEINPROGRESS] = std::wstring(L"Init error: A blocking Windows Sockets 1.1 operation is in progress.");
-	result[WSAEPROCLIM] = std::wstring(L"Init error: A limit on the number of tasks supported by the Windows Sockets implementation has been reached.");
-	result[WSAEFAULT] = std::wstring(L"Init error: The lpWSAData parameter is not a valid pointer.");
-	return result;
-}
-
-std::map<int, std::wstring> Server::makeDeinitMsgMap() {
-	std::map<int,std::wstring> result = std::map<int,std::wstring>();
-	result[WSANOTINITIALISED] = L"Deinit error: A successful WSAStartup call must occur before using this function.";
-	result[WSAENETDOWN] = L"The network subsystem has failed.";
-	result[WSAEINPROGRESS] = L"A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.";
-	return result;
-}
-
-std::map<int, std::wstring> Server::makeListenMsgMap() {
-	std::map<int,std::wstring> result = std::map<int,std::wstring>();
-	result[WSAEBADF] = L"Listening error: The argument socket is not a valid file descriptor.";
-	result[WSAENOTSOCK] = L"Listening error: The argument socket is not a socket.";
-	result[WSAEOPNOTSUPP]= L"Listening error: The socket socket does not support this operation.";
-	return result;
-}
-
+/*
 unsigned Server::runRequest(void* p) {
 	Request* ptr = (Request*) p;
-	(*ptr).runRequest();
+	(*ptr).runThisRequest();
 	return 0;
 }
-
-
-
-std::map<int, std::wstring> Server::makeAcceptMsgMap() {
-	std::map<int,std::wstring> result = std::map<int,std::wstring>();
-	result[WSAEBADF] = L"Accepting error: The socket argument is not a valid file descriptor.";
-	result[WSAENOTSOCK] = L"Accepting error: The descriptor socket argument is not a socket.";
-	result[WSAEOPNOTSUPP] = L"Accepting error: The descriptor socket does not support this operation.";
-	result[WSAEWOULDBLOCK] = L"Accepting error: socket has nonblocking mode set, and there are no pending connections immediately available.";
-	return result;
+*/
+void Server::startServer() {
+	Server& server = getServer();
+	_beginthreadex(NULL,0,Server::runServer,&server,0,NULL);
 }
+
+void Server::stopServer() {
+	getServer().stopThisServer();
+}
+
+Server& Server::getServer() {
+	static Server server;
+	return server;
+}
+
+void Server::stopThisServer() {
+	SetEvent(endFlag);
+}
+
+void __attribute__((dllexport)) stopServer() {
+	Server::stopServer();
+}
+
+void __attribute__((dllexport)) startServer() {
+	Server::startServer();
+}
+

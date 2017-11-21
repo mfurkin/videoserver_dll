@@ -6,34 +6,14 @@
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD     fdwReason, LPVOID    lpvReserved) {
 	BOOL res2 = TRUE;
-	int result;
 	switch(fdwReason) {
 		case DLL_PROCESS_ATTACH:
-		{
-			WSADATA wsadata;
-			result = WSAStartup(MAKEWORD(VERSION_HIGH,VERSION_LOW),&wsadata);
-			std::map<int,std::wstring> initMsgMap = Server::makeInitMsgMap();
-			if (result == WSA_OK){
-				std::wcout<<L"WSAStartup have been run successfully\n";
-				std::wcout<<"version is "<<HIBYTE(wsadata.wVersion)<<"."<<LOBYTE(wsadata.wVersion);
-			}
-			else {
-				res2 = FALSE;
-				Server::outputErrorResult(result,initMsgMap);
-			}
-		}
-		break;
+			Server::startServer();
+			std::wcout<<L"Server have been started successfully\n";
+			break;
 		case DLL_PROCESS_DETACH:
-		{
-			result = WSACleanup();
-			std::map<int,std::wstring> deinitMsgMap = Server::makeDeinitMsgMap();
-			if (result == WSA_OK)
-				std::wcout<<L"WSACleanup have been run successfully\n";
-			else {
-				res2 = FALSE;
-				Server::outputErrorResult(result,deinitMsgMap);
-			}
-		}
+			Server::stopServer();
+			std::wcout<<L"Server have been stopped successfully\n";
 			break;
 	}
 	return res2;
