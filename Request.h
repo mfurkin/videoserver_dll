@@ -2,7 +2,7 @@
  * Request.h
  *
  *  Created on: 12 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #ifndef SERVER_REQUEST_H_
@@ -16,26 +16,10 @@
 #include <wtypes.h>
 #include <winbase.h>
 #include "YUV420toRGBConverter.h"
-enum CONV_TYPE { YUV420toRGB24 = 0,  YUV422toRGB24, RGB24toYUV420,  RGB24toYUV422, YUV420toYUV422};
-enum REQ_STATUS { REQ_RECEIVED = 1, REQ_CONV_IN_PROGRESS, REQ_COMPLETED, REQ_ABORTED};
+#include "server_names.h"
+
 enum {REQ_FLAG_INDEX = 0, END_FLAG_INDEX };
-enum { COLORS_NUM=3 };
-#pragma pack(push,1)
-typedef struct {
-	unsigned short width,height,conv_type;						//	width - ширина исходной картинки,
-																//  height - высота исходной картинки,
-																// 	conv_type - тип преобразования в соответствии с CONV_TYPE
-	char fName[MAX_PATH],respName[MAX_PATH],					// fName - путь к исходному файлу
-		 respPingName[MAX_PATH],destName[MAX_PATH],				// respName - имя ивента для оповещения о пинге
-		 writeCompleted[MAX_PATH],writeEnabled[MAX_PATH];		// respPingName - имя ивента для ответа на пинг
-																// destName - имя shared memory для рез. файла
-																// writeEnabled - имя ивента для разрешения записи в рез. shared memory
-} RequestDataStruct;
-typedef struct {
-	unsigned short progress; 			// в процентах
-	uint8_t req_status;					// статус в соответствии с REQ_STATUS
-}ResponseDataStruct;
-#pragma pack(pop)
+
 class Request {
 
 	public:
@@ -59,6 +43,7 @@ class Request {
 		uint8_t* pingChannel,*destFile;
 		volatile unsigned  progress;
 		volatile uint8_t status;
+		void sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty);
 		void runThisRequest();
 		unsigned pingChannelProc();
 };

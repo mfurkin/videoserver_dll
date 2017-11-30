@@ -2,7 +2,7 @@
  * ChromaWriter.cpp
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #include "ChromaWriter.h"

@@ -2,7 +2,7 @@
  * Converter.cpp
  *
  *  Created on: 19 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #include "Converter.h"
@@ -18,3 +18,10 @@ Converter::~Converter() {
 void Converter::setEndFlag(HANDLE anEndFlag) {
 	endFlag = anEndFlag;
 }
+/*
+void Converter::convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight) {
+	unsigned long size = getDestSize(aWidth,aHeight);
+	memcpy(aDest,&size,sizeof(unsigned long));
+	convertThis(aSource,aDest+sizeof(unsigned long),aWidth,aHeight);
+}
+*/

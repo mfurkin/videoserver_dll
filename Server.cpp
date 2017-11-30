@@ -4,10 +4,9 @@
  *  Created on: 10 нояб. 2017 г.
  *      Author: Михаил
  */
-// #include <iostream>
 
 #include "Server.h"
-// #include "server_names.h"
+
 Server::Server() {
 	size_t size = MAX_PATH*MAX_REQ_NUM;
 	inited = FALSE;
@@ -92,13 +91,7 @@ unsigned Server::runThisServer() {
 	std::wcerr<<"runThisServer exit\n";
 	return res2;
 }
-/*
-unsigned Server::runRequest(void* p) {
-	Request* ptr = (Request*) p;
-	(*ptr).runThisRequest();
-	return 0;
-}
-*/
+
 void Server::startServer() {
 	Server& server = getServer();
 	_beginthreadex(NULL,0,Server::runServer,&server,0,NULL);

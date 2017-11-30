@@ -2,7 +2,7 @@
  * YUV420toYUV422Converter.cpp
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #include "YUV420toYUV422Converter.h"
@@ -68,11 +68,14 @@ uint8_t* YUV420toYUV422Converter::getRedPtr(uint8_t* pic, unsigned short width,
 }
 
 uint8_t* YUV420toYUV422Converter::getFirstChromaticArea(uint8_t* pic, unsigned short width, unsigned short height) {
-	unsigned size = width*height;
-	return pic + (((height + 15) & ~15) * size);
+	return pic + YUV420format::getFirstChromaticAreaOffset(width,height);
 }
 
+unsigned long YUV420toYUV422Converter::getDestSize(unsigned short aWidth, unsigned short aHeight) {
+	return aWidth*aHeight*2;		// По половинке хроматических и целая яркость
+}
+
+
 uint8_t* YUV420toYUV422Converter::getSecondChromaticArea(uint8_t* pic, unsigned short width, unsigned short height) {
-	unsigned size = width*height;
-	return pic + (((((height * 3) / 2) + 15) & ~15) * size);
+	return pic + YUV420format::getSecondChromaticAreaOffset(width,height);
 }

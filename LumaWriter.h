@@ -2,7 +2,7 @@
  * LumaWriter.h
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #ifndef LUMAWRITER_H_

@@ -2,7 +2,7 @@
  * LumaWriter.cpp
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #include "LumaWriter.h"
@@ -16,7 +16,7 @@ unsigned __attribute__((__stdcall__)) LumaWriter::writeLuma(void* p) {
 }
 
 unsigned LumaWriter::writeThisLuma() {
-	int i;
+	unsigned i;
 	uint8_t*d_ptr,*s_ptr;
 	d_ptr = dest_ptr+offset;
 	for (i=0;i++<size;) {

@@ -2,23 +2,26 @@
  * YUV420toYUV422Converter.h
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #ifndef YUV420TOYUV422CONVERTER_H_
 #define YUV420TOYUV422CONVERTER_H_
 #include <process.h>
 #include <windef.h>
-#include "Converter.h"
+#include "YUV420toSomethingConverter.h"
 #include "ChromaWriter.h"
 #include "LumaWriter.h"
+#include "YUV420format.h"
+
 enum {numOfThreads=3,END_INDEX=4};
-class YUV420toYUV422Converter: public Converter {
+class YUV420toYUV422Converter: public YUV420toSomethingConverter {
 public:
 	YUV420toYUV422Converter();
-	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);
 	virtual ~YUV420toYUV422Converter();
 private:
+	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);
+	unsigned long getDestSize(unsigned short aWidth, unsigned short aHeight);
 	virtual unsigned short getLumaDelta();
 	virtual unsigned short getLumaOffset();
 	virtual unsigned short getBlueOffset();

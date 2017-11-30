@@ -2,19 +2,22 @@
  * YUV420toRGBConverter.h
  *
  *  Created on: 19 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #ifndef YUV420TORGBCONVERTER_H_
 #define YUV420TORGBCONVERTER_H_
 
-#include "Converter.h"
+#include "YUV420toSomethingConverter.h"
+#include "server_names.h"
 
-class YUV420toRGBConverter: public Converter {
+class YUV420toRGBConverter: public YUV420toSomethingConverter {
 public:
 	YUV420toRGBConverter();
-	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);
 	virtual ~YUV420toRGBConverter();
+private:
+	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);
+	unsigned long getDestSize(unsigned short aWidth, unsigned short aHeight);
 };
 
 #endif /* YUV420TORGBCONVERTER_H_ */

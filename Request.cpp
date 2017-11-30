@@ -2,7 +2,7 @@
  * Request.cpp
  *
  *  Created on: 12 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #include "Request.h"
@@ -20,7 +20,7 @@ Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE) {
 			std::cerr<<"Request could not be executed: Ping channel could not be open error code="<<GetLastError()<<"\n";
 		else {
 			RequestDataStruct* req_ptr = (RequestDataStruct*) pingChannel;
-			HANDLE hSourceFile = CreateFile((*req_ptr).fName,GENERIC_READ,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+			HANDLE hSourceFile = CreateFile((*req_ptr).source_name,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
 			if (hSourceFile == INVALID_HANDLE_VALUE)
 				std::cerr<<"Request could  not be executed: Source file could not be open error code= "<<GetLastError()<<"\n";
 			else {
@@ -31,15 +31,15 @@ Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE) {
 				if (hMapSource == INVALID_HANDLE_VALUE)
 					std::cerr<<"Request could not be executed: file mapping for source file could not be created error code="<<GetLastError()<<"\n";
 				else {
-					HANDLE hDestFile = OpenFileMapping(FILE_MAP_WRITE,FALSE,(*req_ptr).destName);
+					HANDLE hDestFile = OpenFileMapping(FILE_MAP_WRITE,FALSE,(*req_ptr).dataName);
 					if (hDestFile == INVALID_HANDLE_VALUE)
 						std::cerr<<"Request could not be executed: dest file mappping could not be open error code="<<GetLastError()<<"\n";
 					conv_type = (*req_ptr).conv_type;
-					destFile = (uint8_t*) MapViewOfFile(hDestFile,FILE_MAP_WRITE,0,0,size);
-					pingReq = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).respName);
-					pingNotify = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).respPingName);
-					writeCompleted = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).writeCompleted);
-					writeEnabled = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).writeEnabled);
+					destFile = (uint8_t*) MapViewOfFile(hDestFile,FILE_MAP_WRITE,0,0,size+sizeof(unsigned long));
+					pingReq = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).pingReqName);
+					pingNotify = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).pingNotifyName);
+					writeCompleted = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).writeCompletedName);
+					writeEnabled = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).writeEnabledName);
 					inited = TRUE;
 					std::cerr<<"Request ctor have been completed  successfully.\n";
 				}
@@ -65,15 +65,15 @@ void Request::runThisRequest() {
 				cur_ptr.QuadPart = 0;
 				status = REQ_CONV_IN_PROGRESS;
 				Converter* conv_ptr = converters[conv_type];
-				int picSize = width*height;
+				unsigned picSize = (*conv_ptr).getSourceSize(width,height);
 				events[0] = writeEnabled;
 				events[1] = endFlag;
-				int count = 0,frames;
+				unsigned count = 0,frames;
 				frames = size.QuadPart / picSize;
-				for (;(cur_ptr.QuadPart < size.QuadPart) && (result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE)) && (result == WAIT_OBJECT_0);) {
+				for (sendHeaderData(events,2,picSize,frames);(cur_ptr.QuadPart < size.QuadPart) && (result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE)) && (result == WAIT_OBJECT_0);) {
 					source_ptr = (uint8_t*)MapViewOfFile(hMapSource,FILE_MAP_READ,cur_ptr.HighPart,cur_ptr.LowPart,picSize);
 					(*conv_ptr).convert(source_ptr,destFile,width,height);
-					progress = count*100.0/frames;
+					progress = ++count*100.0 / frames;
 					SetEvent(writeCompleted);
 				}
 				status = (result == WAIT_OBJECT_0) ? REQ_COMPLETED : REQ_ABORTED;
@@ -95,7 +95,7 @@ void Request::initConverters() {
 	Converter* ptr;
 	Converter::setEndFlag(endFlag);
 	ptr = new YUV420toRGBConverter();
-//	converters[YUV420toRGB24] = ptr;
+	converters[YUV420toRGB24] = ptr;
 }
 void Request::releaseConverter(std::pair<unsigned short, Converter*> pair) {
 	delete pair.second;
@@ -103,6 +103,15 @@ void Request::releaseConverter(std::pair<unsigned short, Converter*> pair) {
 void Request::deinitConverters() {
 	std::map<unsigned short,Converter*>::iterator begin = converters.begin(), end = converters.end();
 	for_each(begin,end,Request::releaseConverter);
+}
+
+void Request::sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty) {
+//	unsigned result;
+	HeaderDataStruct* header_ptr;
+	header_ptr = (HeaderDataStruct*) destFile;
+	(*header_ptr).frame_size = frameSize;
+	(*header_ptr).frames_qty = framesQty;
+	SetEvent(writeCompleted);
 }
 
 unsigned Request::pingChannelProc() {

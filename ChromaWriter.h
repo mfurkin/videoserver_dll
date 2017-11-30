@@ -2,7 +2,7 @@
  * ChromaWriter.h
  *
  *  Created on: 21 нояб. 2017 г.
- *      Author: Алёна
+ *
  */
 
 #ifndef CHROMAWRITER_H_
