@@ -22,6 +22,7 @@ typedef struct {
 	uint8_t type;
 	char fname_in[MAX_PATH],fname_out[MAX_PATH];
 }RequestData;
+
 class Server {
 public:
 	virtual ~Server();
@@ -37,9 +38,15 @@ private:
 	Server(const Server&) = delete;
 	Server& operator =(const Server& ) = delete;
 	BOOL inited;
-	BOOL createEvent(HANDLE& event, BOOL manualReset, BOOL initialState, const std::string& name, const std::string msg);
-	BOOL createMutex(HANDLE& mutex, BOOL initialOwner, const std::string& name, const std::string& msg);
+	void controlSynchro(std::string correct, std::string error,  unsigned long result);
+	static void logPtr(std::string msg,  unsigned ptr);
+	void checkSynchro(HANDLE synchro);
+	void checkMutex(HANDLE mutex);
+	void checkEvent(HANDLE event);
+	BOOL createEvent(HANDLE* event_ptr, BOOL manualReset, BOOL initialState, const std::string& name, const std::string msg);
+	BOOL createMutex(HANDLE* mutex_ptr, BOOL initialOwner, const std::string& name, const std::string& msg);
 	void outputMsg(const std::string&msg, BOOL result);
+	void outputWaitResult(unsigned result, unsigned num, std::string msg);
 	LPSTR buf;
 	HANDLE fileInput,reqFlag,endFlag,reqEnabledFlag;
 	HANDLE requestMutex;

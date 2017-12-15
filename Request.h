@@ -36,7 +36,8 @@ class Request {
 		static std::map<unsigned short,Converter*> converters;
 		std::string  pingName;													// pingName - имя shared memory для пинга сервера
 		BOOL inited;															// успешно проинициализировано
-		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
+//		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
+		HANDLE hMapSource,pingReq,pingNotify,destFileAccess;					// hSourceFile - исходный файл
 		unsigned short conv_type,width,height;												// conv_type - вид преобразования
 																				// hPingChannel - shared memory для пинга
 																				// hDestFile - shared memory для рез.файла

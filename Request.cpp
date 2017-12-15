@@ -8,16 +8,15 @@
 #include "Request.h"
 
 HANDLE Request::endFlag=NULL;
-std::map<unsigned short, Converter*> Request::converters;
-
 Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE) {
-	HANDLE hPingChannel = OpenFileMapping(FILE_MAP_READ,FALSE,pingName.c_str());
-	if (hPingChannel  == INVALID_HANDLE_VALUE)
-		std::cerr<<"Request could not be  executed: source could not be open, error code="<<GetLastError()<<"\n";
+	std::cerr<<"Request ctor pingName="<<pingName<<"\n";
+	HANDLE hPingChannel = OpenFileMapping(FILE_MAP_WRITE,FALSE,pingName.c_str());
+	if (!(hPingChannel))
+		std::cerr<<"Request could not be  executed: ping channel could not be open, error code="<<GetLastError()<<"\n";
 	else {
 		pingChannel = (uint8_t*) MapViewOfFile(hPingChannel,FILE_MAP_ALL_ACCESS,0,0,sizeof(RequestDataStruct));
-		if (pingChannel == NULL)
-			std::cerr<<"Request could not be executed: Ping channel could not be open error code="<<GetLastError()<<"\n";
+		if (!(pingChannel))
+			std::cerr<<"Request could not be executed: Ping channel could not be mapped error code="<<GetLastError()<<"\n";
 		else {
 			RequestDataStruct* req_ptr = (RequestDataStruct*) pingChannel;
 			HANDLE hSourceFile = CreateFile((*req_ptr).source_name,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
@@ -38,8 +37,11 @@ Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE) {
 					destFile = (uint8_t*) MapViewOfFile(hDestFile,FILE_MAP_WRITE,0,0,size+sizeof(unsigned long));
 					pingReq = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).pingReqName);
 					pingNotify = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).pingNotifyName);
+					destFileAccess = OpenMutex(SYNCHRONIZE,FALSE,(*req_ptr).destFileAccessName);
+/*
 					writeCompleted = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).writeCompletedName);
 					writeEnabled = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).writeEnabledName);
+*/
 					inited = TRUE;
 					std::cerr<<"Request ctor have been completed  successfully.\n";
 				}
@@ -47,6 +49,8 @@ Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE) {
 		}
 	}
 }
+
+std::map<unsigned short, Converter*> Request::converters;
 
 Request::~Request() {
 }
@@ -56,17 +60,20 @@ void Request::runThisRequest() {
 	progress = 0;
 	LARGE_INTEGER size,cur_ptr;
 	BOOL res2;
-	_beginthreadex(NULL,0,pingChannelThread,this,0,NULL);
-	res2 = GetFileSizeEx(hMapSource,&size);
-	if (res2) {
-				HANDLE events[2];
+	std::cerr<<"Request::runThisRequest enter inited="<<inited<<"\n";
+	if (inited) {
+		_beginthreadex(NULL,0,pingChannelThread,this,0,NULL);
+		res2 = GetFileSizeEx(hMapSource,&size);
+		if (res2) {
+			HANDLE events[2];
 				uint8_t* source_ptr;
 				unsigned result;
 				cur_ptr.QuadPart = 0;
 				status = REQ_CONV_IN_PROGRESS;
 				Converter* conv_ptr = converters[conv_type];
 				unsigned picSize = (*conv_ptr).getSourceSize(width,height);
-				events[0] = writeEnabled;
+//				events[0] = writeEnabled;
+				events[0] = destFileAccess;
 				events[1] = endFlag;
 				unsigned count = 0,frames;
 				frames = size.QuadPart / picSize;
@@ -74,10 +81,13 @@ void Request::runThisRequest() {
 					source_ptr = (uint8_t*)MapViewOfFile(hMapSource,FILE_MAP_READ,cur_ptr.HighPart,cur_ptr.LowPart,picSize);
 					(*conv_ptr).convert(source_ptr,destFile,width,height);
 					progress = ++count*100.0 / frames;
-					SetEvent(writeCompleted);
+					ReleaseMutex(destFileAccess);
+//					SetEvent(writeCompleted);
 				}
 				status = (result == WAIT_OBJECT_0) ? REQ_COMPLETED : REQ_ABORTED;
+		}
 	}
+	std::cerr<<"Request::runThisRequest exit\n";
 }
 
 unsigned Request::runRequest(void* p) {
@@ -106,12 +116,16 @@ void Request::deinitConverters() {
 }
 
 void Request::sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty) {
-//	unsigned result;
+//	unsi---gned result;
 	HeaderDataStruct* header_ptr;
-	header_ptr = (HeaderDataStruct*) destFile;
-	(*header_ptr).frame_size = frameSize;
-	(*header_ptr).frames_qty = framesQty;
-	SetEvent(writeCompleted);
+	int result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE);
+	if (result == WAIT_OBJECT_0) {
+		header_ptr = (HeaderDataStruct*) destFile;
+		(*header_ptr).frame_size = frameSize;
+		(*header_ptr).frames_qty = framesQty;
+		ReleaseMutex(destFileAccess);
+//		SetEvent(writeCompleted);
+	}
 }
 
 unsigned Request::pingChannelProc() {

@@ -14,10 +14,18 @@ const std::string REQ_FLAG_NAME = "videoserver_request";
 const std::string REQ_FILE_NAME = "server_input";
 const std::string REQ_ENABLED_FLAG = "request_enabled_flag";
 const std::string REQ_MUTEX_NAME = "request_mutex";
+const std::string END_FLAG_NAME = "end_flag";
 const std::string REQ_FLAG_CREATING_MSG = "ReqFlag could not be created";
 const std::string END_FLAG_CREATING_MSG = "EndFlag could not be created";
 const std::string REQ_ENABLED_FLAG_CREATING_MSG = "ReqEnabledFlag could not be created";
 const std::string REQ_MUTEX_CREATING_MSG = "RequestMutex could not be created";
+
+const std::string YUV420toRGB24_st="YUV420toRGB24";
+const std::string YUV422toRGB24_st="YUV422toRGB24";
+const std::string RGB24toYUV420_st = "RGB24toYUV420";
+const std::string RGB24toYUV422_st = "RGB24toYUV422";
+const std::string YUV420toYUV422_st = "YUV420toYUV422";
+
 enum { NO_CONV_TYPE = 0, YUV420toRGB24,  YUV422toRGB24, RGB24toYUV420,  RGB24toYUV422, YUV420toYUV422};
 enum { COLORS_NUM=3 };
 enum { REQ_RECEIVED = 1, REQ_CONV_IN_PROGRESS, REQ_COMPLETED, REQ_ABORTED};
@@ -29,7 +37,9 @@ typedef struct {
 																// 	conv_type - тип преобразования в соответствии с CONV_TYPE
 	char source_name[MAX_PATH],pingReqName[MAX_PATH],				// sourceName - путь к исходному файлу
 		 pingNotifyName[MAX_PATH],dataName[MAX_PATH],				// pingReqName - имя ивента для оповещения о пинге
-		 writeCompletedName[MAX_PATH],writeEnabledName[MAX_PATH];		// pingNotifyName - имя ивента для ответа на пинг
+		 destFileAccessName[MAX_PATH],
+		 headerDataWrittenName[MAX_PATH];
+//		 writeCompletedName[MAX_PATH],writeEnabledName[MAX_PATH];		// pingNotifyName - имя ивента для ответа на пинг
 																// dataName - имя shared memory для рез. файла
 																// writeEnabled - имя ивента для разрешения записи в рез. shared memory
 } RequestDataStruct;
