@@ -16,7 +16,9 @@
 #include <wtypes.h>
 #include <winbase.h>
 #include "YUV420toRGBConverter.h"
+#include "YUV420toYUV422Converter.h"
 #include "server_names.h"
+#include "Server.h"
 
 enum {REQ_FLAG_INDEX = 0, END_FLAG_INDEX };
 
@@ -37,6 +39,7 @@ class Request {
 		std::string  pingName;													// pingName - имя shared memory для пинга сервера
 		BOOL inited;															// успешно проинициализировано
 //		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
+		LARGE_INTEGER fileSize;
 		HANDLE hMapSource,pingReq,pingNotify,destFileAccess;					// hSourceFile - исходный файл
 		unsigned short conv_type,width,height;												// conv_type - вид преобразования
 																				// hPingChannel - shared memory для пинга
@@ -44,6 +47,9 @@ class Request {
 		uint8_t* pingChannel,*destFile;
 		volatile unsigned  progress;
 		volatile uint8_t status;
+	HANDLE headerDataWritten;
+	int in_progress;
+
 		void sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty);
 		void runThisRequest();
 		unsigned pingChannelProc();

@@ -8,8 +8,8 @@
 #include "ChromaWriter.h"
 
 ChromaWriter::ChromaWriter(uint8_t* aSourcePtr,uint8_t* aDestPtr, unsigned short aWidth, unsigned short aHeight,unsigned short anOffset,
-						   HANDLE aCompleted):source_ptr(aSourcePtr),dest_ptr(aDestPtr),width(aWidth),height(aHeight),offset(anOffset),
-						   	   	   	   	   	  completed(aCompleted) {
+						   HANDLE aCompleted, std::string aColorName,int aFlag):source_ptr(aSourcePtr),dest_ptr(aDestPtr),width(aWidth),height(aHeight),offset(anOffset),
+						   colorName(aColorName),completed(aCompleted),flag(aFlag) {
 }
 
 ChromaWriter::~ChromaWriter() {
@@ -22,15 +22,20 @@ unsigned __attribute__((__stdcall__)) ChromaWriter::writeChroma(void* p) {
 }
 
 unsigned ChromaWriter::writeThisChroma() {
-	unsigned short i,j;
-	unsigned width2 = width / 2,  height1 = height - 1;
-	uint8_t* d_ptr = dest_ptr+offset;
-	for(i=0;i++<height1;)
+	std::cerr<<"writeThisChroma "<<colorName<<" enter\n";
+	if (flag) {
+		unsigned short i,j;
+		unsigned width2 = width / 2,  height1 = height - 1;
+		uint8_t* d_ptr = dest_ptr+offset;
+
+		for(i=0;i++<height1;)
+			for (j=0;j++<width2;)
+				writeChromaSample(d_ptr,getUpSamplingChroma(i,j));
 		for (j=0;j++<width2;)
-			writeChromaSample(d_ptr,getUpSamplingChroma(i,j));
-	for (j=0;j++<width2;)
-		writeChromaSample(d_ptr,getUpSamplingLastLine(j));
+			writeChromaSample(d_ptr,getUpSamplingLastLine(j));
+	}
 	SetEvent(completed);
+	std::cerr<<"writeThisChroma "<<colorName<<" exit\n";
 	return 0;
 }
 

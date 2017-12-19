@@ -19,22 +19,11 @@ Server::Server() {
 			if (buf == NULL)
 				std::wcerr<<L"Shared memory could not be created error code="<<GetLastError()<<"\n";
 			else {
-				/*
-					reqFlag = CreateEvent(NULL,FALSE,FALSE,REQ_FLAG_NAME.c_str());
-					logPtr("Server ctor pt1  reqFlag=",(unsigned)reqFlag);
-					endFlag = CreateEvent(NULL,FALSE,FALSE,NULL);
-					logPtr("Server ctor pt1 endFlag=",(unsigned)endFlag);
-					reqEnabledFlag = CreateEvent(NULL,FALSE,TRUE,REQ_ENABLED_FLAG.c_str());
-					logPtr("Server ctor pt1 reqEnabledFlag=",(unsigned)reqEnabledFlag);
-					requestMutex = CreateMutex(NULL,TRUE,REQ_MUTEX_NAME.c_str());
-					logPtr("Server ctor pt1 requestMutex=",(unsigned)requestMutex);
-					*/
 				std::cerr<<"Server ctor pt1\n";
 					inited = createEvent(&reqFlag,FALSE,FALSE,REQ_FLAG_NAME,REQ_FLAG_CREATING_MSG) &&
 							 createEvent(&endFlag,FALSE,FALSE,END_FLAG_NAME,END_FLAG_CREATING_MSG) &&
 							 createEvent(&reqEnabledFlag,FALSE,TRUE,REQ_ENABLED_FLAG,REQ_ENABLED_FLAG_CREATING_MSG) &&
 							 createMutex(&requestMutex,FALSE,REQ_MUTEX_NAME,REQ_MUTEX_CREATING_MSG);
-//							 createMutex(requestMutex,TRUE,REQ_MUTEX_NAME,REQ_MUTEX_CREATING_MSG);
 					logPtr("Server ctor pt2  reqFlag=",(unsigned)reqFlag);
 					logPtr("Server ctor pt2 endFlag=",(unsigned)endFlag);
 					logPtr("Server ctor pt2 reqEnabledFlag=",(unsigned)reqEnabledFlag);
@@ -85,7 +74,7 @@ void Server::logPtr(std::string msg, unsigned ptr) {
 
 void Server::outputMsg(const std::string& msg, BOOL result) {
 	if  (!(result))
-		std::cerr<<msg.c_str()<<" error code = "<<GetLastError()<<"\n";
+		std::cerr<<msg<<" error code = "<<GetLastError()<<"\n";
 }
 
 Server::~Server() {
@@ -104,7 +93,6 @@ void Server::checkSynchro(HANDLE synchro) {
 	std::cerr<<"checkSynchro enter\n";
 	WaitForSingleObjectEx(synchro,INFINITE,TRUE);
 	std::cerr<<"checkSynchro exit\n";
-
 }
 
 void Server::checkMutex(HANDLE mutex) {
@@ -146,26 +134,13 @@ unsigned Server::runThisServer() {
 	unsigned res2 = 0;
 	std::wcerr<<"runThisServer enter\n";
 	HANDLE events[2];
-//	HANDLE mutex= CreateMutex(NULL,FALSE,NULL);
 	events[0] = reqFlag;
 	events[1] = endFlag;
 	unsigned long result,res3,res4;
-	//,res5;
 	std::string reqName,reqPingName;
 
 	res4 = SetEvent(reqEnabledFlag);
 	controlSynchro("ReqEnabledFlag have been set successfully","It was errors during ReqEnabledFlag setting",res4);
-//	checkEvent(reqEnabledFlag);
-//	checkMutex(mutex);
-//	std::cerr<<"some mutex checked. Request mutex to check..\n";
-/*
-	checkMutex(requestMutex);
-/
-	res5 = ReleaseMutex(requestMutex);
-	controlSynchro("ReqMutex have been released successfully","it was errors during ReqMutex releasing",res5);
-*/
-// WAIT_OBJECT_0 = 0, поэтому отрицание в условии
-//	for(;(!(result=WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,FALSE))) && (result == WAIT_OBJECT_0);) {
 	std::cerr<<"Waiting requests..\n";
 	for(;(!(result=WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,FALSE)));) {
 		outputWaitResult(result,2,"Server::runThisServer in the loop pt1");

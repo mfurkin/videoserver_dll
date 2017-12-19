@@ -7,15 +7,17 @@
 
 #ifndef CHROMAWRITER_H_
 #define CHROMAWRITER_H_
+#include <iostream>
 #include <stdint.h>
 #include <wtypes.h>
 #include <winbase.h>
 #include <windef.h>
 class ChromaWriter {
+
 public:
 
 	ChromaWriter(uint8_t* aSourcePtr,uint8_t* aDestPtr, unsigned short aWidth, unsigned short aHeight,unsigned short anOffset,
-				 HANDLE aCompleted);
+				 HANDLE aCompleted, std::string aColorName, int aFlag = 1);
 	virtual ~ChromaWriter();
 	static unsigned WINAPI writeChroma(void* p);
 private:
@@ -27,7 +29,9 @@ private:
 	uint8_t getUpSamplingLastLine(unsigned short col);
 	uint8_t* source_ptr, *dest_ptr;
 	unsigned short width,height,offset;
+	std::string colorName;
 	HANDLE completed;
+	int flag;
 };
 
 #endif /* CHROMAWRITER_H_ */

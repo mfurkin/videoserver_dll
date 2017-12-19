@@ -32,6 +32,7 @@ public:
 	void static startServer();
 	void static stopServer();
 	void stopThisServer();
+	static void logPtr(std::string msg,  unsigned ptr);
 //	static unsigned WINAPI runRequest(void* ptr);
 private:
 	Server();
@@ -39,7 +40,7 @@ private:
 	Server& operator =(const Server& ) = delete;
 	BOOL inited;
 	void controlSynchro(std::string correct, std::string error,  unsigned long result);
-	static void logPtr(std::string msg,  unsigned ptr);
+
 	void checkSynchro(HANDLE synchro);
 	void checkMutex(HANDLE mutex);
 	void checkEvent(HANDLE event);
