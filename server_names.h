@@ -29,6 +29,8 @@ const std::string YUV420toYUV422_st = "YUV420toYUV422";
 enum { NO_CONV_TYPE = 0, YUV420toRGB24,  YUV422toRGB24, RGB24toYUV420,  RGB24toYUV422, YUV420toYUV422};
 enum { COLORS_NUM=3 };
 enum { REQ_RECEIVED = 1, REQ_CONV_IN_PROGRESS, REQ_COMPLETED, REQ_ABORTED};
+enum {REQ_TIMEOUT = 10000, REQ_TOUT_COUNT=10};
+
 #pragma pack(push,1)
 typedef struct {
 
@@ -38,10 +40,14 @@ typedef struct {
 	char source_name[MAX_PATH],pingReqName[MAX_PATH],				// sourceName - путь к исходному файлу
 		 pingNotifyName[MAX_PATH],dataName[MAX_PATH],				// pingReqName - имя ивента для оповещения о пинге
 		 destFileAccessName[MAX_PATH],
-		 headerDataWrittenName[MAX_PATH];
-//		 writeCompletedName[MAX_PATH],writeEnabledName[MAX_PATH];		// pingNotifyName - имя ивента для ответа на пинг
+		 /*
+		 headerDataWrittenName[MAX_PATH],
+		 writeRequestName[MAX_PATH];
+		 */
+		 writeCompletedName[MAX_PATH],writeEnabledName[MAX_PATH];		// pingNotifyName - имя ивента для ответа на пинг
 																// dataName - имя shared memory для рез. файла
-																// writeEnabled - имя ивента для разрешения записи в рез. shared memory
+																// writeEnabledName - имя ивента для разрешения записи в рез. shared memory
+																// writeCompletedName - имя ивента оповещеня о записи в shared memory
 } RequestDataStruct;
 
 typedef struct {

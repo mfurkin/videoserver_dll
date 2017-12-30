@@ -8,8 +8,10 @@
 #include "Request.h"
 
 HANDLE Request::endFlag=NULL;
+Server* Request::server_ptr = NULL;
+std::string Request::REQUEST_MAIN_THREAD="Request_main_thread";
 std::map<unsigned short, Converter*> Request::converters;
-Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE),in_progress(0) {
+Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE),in_progress(0),timeout_count(10) {
 	std::cerr<<"Request ctor pingName="<<pingName<<"\n";
 	HANDLE hPingChannel = OpenFileMapping(FILE_MAP_WRITE,FALSE,pingName.c_str());
 	if (!(hPingChannel))
@@ -47,20 +49,28 @@ Request::Request(std::string aPingName):pingName(aPingName),inited(FALSE),in_pro
 							pingReq = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).pingReqName);
 							pingNotify = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).pingNotifyName);
 							std::cerr<<"Request ctor destFileAccessName="<<(*req_ptr).destFileAccessName<<"\n";
+							/*
 							destFileAccess = OpenMutex(SYNCHRONIZE,FALSE,(*req_ptr).destFileAccessName);
 							if (!(destFileAccess))
 								std::cerr<<"Request ctor error during destFileAccessMutex opening error code="<<GetLastError()<<"\n";
+//							std::cerr<<"Request ctor writeRequestName="<<(*req_ptr).writeRequestName<<"\n";
+
+							writeRequest = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).writeRequestName);
 							headerDataWritten = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).headerDataWrittenName);
-							inited = destFile && pingReq && pingNotify && destFileAccess && headerDataWritten;
+							*/
+//							inited = destFile && pingReq && pingNotify && destFileAccess && headerDataWritten && writeRequest;
+							writeEnabled = OpenEvent(SYNCHRONIZE,FALSE,(*req_ptr).writeEnabledName);
+							writeCompleted = OpenEvent(EVENT_MODIFY_STATE,FALSE,(*req_ptr).writeCompletedName);
+							inited = destFile && pingReq && pingNotify && writeEnabled && writeCompleted;
 							if (inited)
 								std::cerr<<"Request ctor have been completed  successfully.\n";
 							else {
 								std::cerr<<"Some errors have been got during Request ctor\n";
-								Server::logPtr("Request ctor destFile=",(unsigned)destFile);
-								Server::logPtr("Request ctor pingReq=",(unsigned)pingReq);
-								Server::logPtr("Request ctor  pingNotify=",(unsigned)pingNotify);
-								Server::logPtr("Request ctor destFileAccess=",(unsigned)destFileAccess);
-								Server::logPtr("Request ctor headerDataWritten=",(unsigned)headerDataWritten);
+								logPtr("Request ctor destFile=",(unsigned)destFile);
+								logPtr("Request ctor pingReq=",(unsigned)pingReq);
+								logPtr("Request ctor  pingNotify=",(unsigned)pingNotify);
+								logPtr("Request ctor writeCompleted=",(unsigned)writeCompleted);
+								logPtr("Request ctor writeEnabled=",(unsigned)writeEnabled);
 							}
 						}
 					}
@@ -84,9 +94,9 @@ void Request::runThisRequest() {
 		in_progress = 1;
 		_beginthreadex(NULL,0,pingChannelThread,this,0,NULL);
 		std::cerr<<"Request::runThisRequest pt1 \n";
-				HANDLE events[2];
+//				HANDLE events[2];
 				uint8_t* source_ptr;
-				unsigned result;
+//				unsigned result;
 				cur_ptr.QuadPart = 0;
 				status = REQ_CONV_IN_PROGRESS;
 				std::cerr<<"Request::runThisRequest pt2 convtype="<<conv_type<<"\n";
@@ -95,32 +105,44 @@ void Request::runThisRequest() {
 					std::cerr<<"Request::runThisRequest unknown converion type!\n";
 				else {
 						unsigned picSize = (*conv_ptr).getSourceSize(width,height);
+/*
 						events[0] = destFileAccess;
 						events[1] = endFlag;
+						*/
 						unsigned count = 0,frames;
 						unsigned long out_size = (*conv_ptr).getDestSize(width,height);
+						volatile int req_rcvd;
 //						frames = fileSize.QuadPart / picSize;
 						frames = fileSize.QuadPart / out_size;
 						std::cerr<<"Request::runThisRequest before loop size="<<fileSize.QuadPart<<" cur_ptr="<<cur_ptr.QuadPart<<" picSize="<<picSize<<"\n";
 
 //						for (sendHeaderData(events,2,picSize,frames);(in_progress) && (cur_ptr.QuadPart < fileSize.QuadPart) && (!(result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE)));) {
-						for (sendHeaderData(events,2,out_size,frames);(in_progress) && (cur_ptr.QuadPart < fileSize.QuadPart) && (!(result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE)));) {
+//						for (sendHeaderData(events,2,out_size,frames);(in_progress) && (cur_ptr.QuadPart < fileSize.QuadPart) && (!(result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE)));) {
+						req_rcvd = 0;
+						for (sendHeaderData(out_size,frames);(in_progress) && (cur_ptr.QuadPart < fileSize.QuadPart) && waitDataRequest(req_rcvd);) {
 							std::cerr<<"Request::runThisRequest loop pt1\n";
 							source_ptr = (uint8_t*)MapViewOfFile(hMapSource,FILE_MAP_READ,cur_ptr.HighPart,cur_ptr.LowPart,picSize);
-							Server::logPtr("Request::runThisRequest loop pt2 source_ptr=",(unsigned)source_ptr);
-							if (!(source_ptr)) {
-								std::cerr<<"Request::runThisRequest error during MapViewOfFile error code="<<GetLastError()<<"\n";
-								in_progress = 0;
-							} else {
-								(*conv_ptr).convert(source_ptr,destFile,width,height);
-								std::cerr<<"Request::runThisRequest loop pt3\n";
-								progress = ++count*100.0 / frames;
-								ReleaseMutex(destFileAccess);
-								UnmapViewOfFile(source_ptr);
-								std::cerr<<"Request::runThisRequest loop pt4\n";
+							if (req_rcvd) {
+//							Server::logPtr("Request::runThisRequest loop pt2 source_ptr=",(unsigned)source_ptr);
+								if (!(source_ptr)) {
+									std::cerr<<"Request::runThisRequest error during MapViewOfFile error code="<<GetLastError()<<"\n";
+									in_progress = 0;
+								} else {
+									(*conv_ptr).convert(source_ptr,destFile,width,height);
+									std::cerr<<"Request::runThisRequest loop pt3\n";
+									progress = ++count*100.0 / frames;
+									SetEvent(writeCompleted);
+//									ReleaseMutex(destFileAccess);
+									req_rcvd = 0;
+									UnmapViewOfFile(source_ptr);
+									std::cerr<<"Request::runThisRequest loop pt4\n";
+								}
 							}
 						}
-						status = (result == WAIT_OBJECT_0) ? REQ_COMPLETED : REQ_ABORTED;
+						in_progress = 0;
+						if (status != REQ_ABORTED)
+							status = REQ_COMPLETED;
+//						status = (result == WAIT_OBJECT_0) ? REQ_COMPLETED : REQ_ABORTED;
 				}
 	}
 	std::cerr<<"Request::runThisRequest exit\n";
@@ -153,9 +175,12 @@ void Request::deinitConverters() {
 	for_each(begin,end,Request::releaseConverter);
 }
 
-void Request::sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty) {
+void Request::sendHeaderData(unsigned frameSize, unsigned framesQty) {
 	std::cerr<<"Request::sendHeaderData enter\n";
 	HeaderDataStruct* header_ptr;
+	HANDLE events[2];
+	events[0] = writeCompleted;
+	events[1] = endFlag;
 	unsigned result = WaitForMultipleObjectsEx(2,events,FALSE,INFINITE,TRUE);
 	std::cerr<<"Request::sendHeaderData pt1 result="<<result<<"\n";
 	if (result == WAIT_OBJECT_0) {
@@ -165,12 +190,91 @@ void Request::sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsi
 		std::cerr<<"Request::sendHeaderData pt3\n";
 		(*header_ptr).frames_qty = framesQty;
 		std::cerr<<"Request::sendHeaderData pt4\n";
+		SetEvent(writeCompleted);
+/*
 		SetEvent(headerDataWritten);
 		ReleaseMutex(destFileAccess);
+		*/
 	}
 	std::cerr<<"Request::sendHeaderData exit\n";
 }
 
+int Request::waitDataRequest(volatile int& req_rcvd) {
+	static HANDLE events[2] = {writeEnabled,endFlag};
+	unsigned result;
+	int res;
+//	,in_wait;
+//	int count = 2;
+//	int mutex_rcvd=0,req_evt_rcvd= 0;
+	result = WaitForMultipleObjectsEx(3,events,FALSE,REQ_TIMEOUT,TRUE);
+	if (result == WAIT_FAILED) {
+			status = REQ_ABORTED;
+			res = 0;
+	} else
+		if (result == WAIT_TIMEOUT) {
+				status = REQ_ABORTED;
+				res = timeout_count--;
+		} else
+				if (result >= WAIT_ABANDONED) {
+					res = FALSE;
+					status = REQ_ABORTED;
+				} else {
+					unsigned index = result - WAIT_OBJECT_0;
+					if (index == END_INDEX)
+						res = 0;
+					else {
+						res = 1;
+						req_rcvd = 1;
+					}
+				}
+//	req_rcvd = mutex_rcvd && req_evt_rcvd;
+	return res;
+}
+
+void Request::logPtr(std::string msg, unsigned ptr) {
+	if (server_ptr)
+		(*server_ptr).logPtr(REQUEST_MAIN_THREAD,msg,ptr);
+}
+
+/*
+int Request::waitDataRequest(volatile int& req_rcvd) {
+	static HANDLE events[3] = {destFileAccess,endFlag,writeRequest};
+	unsigned result;
+	int res,in_wait;
+	int count = 2;
+	int mutex_rcvd=0,req_evt_rcvd= 0;
+	for(in_wait=1; in_wait && count--;) {
+		result = WaitForMultipleObjectsEx(3,events,FALSE,REQ_TIMEOUT,TRUE);
+		if (result == WAIT_FAILED) {
+			status = REQ_ABORTED;
+			res = 0;
+			in_wait = 0;
+		} else
+			if (result == WAIT_TIMEOUT) {
+				status = REQ_ABORTED;
+				res = timeout_count--;
+				in_wait = 0;
+			} else
+				if (result >= WAIT_ABANDONED) {
+					res = FALSE;
+					status = REQ_ABORTED;
+					in_wait = 0;
+				} else {
+					unsigned index = result - WAIT_OBJECT_0;
+					if (index == END_INDEX)
+						res = 0;
+					else {
+						if (index == MUTEX_INDEX)
+							mutex_rcvd = 1;
+						if (index == WRITE_REQ_INDEX)
+							req_evt_rcvd = 1;
+					}
+				}
+	}
+	req_rcvd = mutex_rcvd && req_evt_rcvd;
+	return res;
+}
+*/
 unsigned Request::pingChannelProc() {
 	HANDLE events[2];
 	std::cerr<<"Request::PingChannelProc enter\n";
@@ -196,4 +300,8 @@ unsigned Request::pingChannelProc() {
 unsigned Request::pingChannelThread(void* p) {
 	Request* ptr = (Request*) p;
 	return (*ptr).pingChannelProc();
+}
+
+void Request::setServerPtr(Server* aServerPtr) {
+	server_ptr = aServerPtr;
 }

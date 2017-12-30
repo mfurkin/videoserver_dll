@@ -8,8 +8,10 @@
 #include "ChromaWriter.h"
 
 ChromaWriter::ChromaWriter(uint8_t* aSourcePtr,uint8_t* aDestPtr, unsigned short aWidth, unsigned short aHeight,unsigned short anOffset,
-						   HANDLE aCompleted, std::string aColorName,int aFlag):source_ptr(aSourcePtr),dest_ptr(aDestPtr),width(aWidth),height(aHeight),offset(anOffset),
-						   colorName(aColorName),completed(aCompleted),flag(aFlag) {
+						   HANDLE aCompleted, std::string aColorName,int aFlag, LoggerEngine* aLoggerPtr):source_ptr(aSourcePtr),
+						   dest_ptr(aDestPtr),width(aWidth),height(aHeight),offset(anOffset),colorName(aColorName),completed(aCompleted),
+						   flag(aFlag),logger_ptr(aLoggerPtr) {
+	tag = std::string("ChromaWriter::").append(colorName);
 }
 
 ChromaWriter::~ChromaWriter() {
@@ -22,7 +24,7 @@ unsigned __attribute__((__stdcall__)) ChromaWriter::writeChroma(void* p) {
 }
 
 unsigned ChromaWriter::writeThisChroma() {
-	std::cerr<<"writeThisChroma "<<colorName<<" enter\n";
+	logString("writeThisChroma enter ",colorName);
 	if (flag) {
 		unsigned short i,j;
 		unsigned width2 = width / 2,  height1 = height - 1;
@@ -35,7 +37,7 @@ unsigned ChromaWriter::writeThisChroma() {
 			writeChromaSample(d_ptr,getUpSamplingLastLine(j));
 	}
 	SetEvent(completed);
-	std::cerr<<"writeThisChroma "<<colorName<<" exit\n";
+	logString("writeThisChroma exit ",colorName);
 	return 0;
 }
 
@@ -58,6 +60,21 @@ uint8_t ChromaWriter::getUpSamplingChroma(unsigned short row, unsigned short col
 
 uint8_t ChromaWriter::clip8(unsigned short data) {
 	return (data > 255) ? 255 : data;
+}
+
+void ChromaWriter::log(std::string msg) {
+	if (logger_ptr)
+		(*logger_ptr).log(tag,msg);
+}
+
+void ChromaWriter::logPtr(std::string msg, unsigned ptr) {
+	if (logger_ptr)
+		(*logger_ptr).logPtr(tag,msg,ptr);
+}
+
+void ChromaWriter::logString(std::string msg,	std::string& msg2) {
+	if (logger_ptr)
+		(*logger_ptr).logString(tag, msg, msg2);
 }
 
 uint8_t ChromaWriter::getUpSamplingLastLine(unsigned short col) {

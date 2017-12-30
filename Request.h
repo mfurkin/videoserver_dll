@@ -19,7 +19,7 @@
 #include "YUV420toYUV422Converter.h"
 #include "server_names.h"
 #include "Server.h"
-
+class Server;
 enum {REQ_FLAG_INDEX = 0, END_FLAG_INDEX };
 
 class Request {
@@ -32,27 +32,35 @@ class Request {
 		static void deinitConverters();
 		static void releaseConverter(std::pair<unsigned short, Converter*> pair);
 		static void setEndFlag(HANDLE anEndFlag);
+		static void setServerPtr(Server* aServerPtr);
 		virtual ~Request();
 	private:
+		void logPtr(std::string msg, unsigned ptr);
+		int waitDataRequest(volatile int& req_rcvd);
+		void sendHeaderData(unsigned frameSize, unsigned framesQty);
+		void runThisRequest();
+		unsigned pingChannelProc();
 		static HANDLE endFlag;
+		static std::string REQUEST_MAIN_THREAD;
 		static std::map<unsigned short,Converter*> converters;
+		static Server* server_ptr;
 		std::string  pingName;													// pingName - имя shared memory для пинга сервера
 		BOOL inited;															// успешно проинициализировано
 //		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
 		LARGE_INTEGER fileSize;
-		HANDLE hMapSource,pingReq,pingNotify,destFileAccess;					// hSourceFile - исходный файл
-		unsigned short conv_type,width,height;												// conv_type - вид преобразования
+//		HANDLE hMapSource,pingReq,pingNotify,destFileAccess,writeRequest;
+		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
+		unsigned short conv_type,width,height;									// conv_type - вид преобразования
 																				// hPingChannel - shared memory для пинга
 																				// hDestFile - shared memory для рез.файла
 		uint8_t* pingChannel,*destFile;
 		volatile unsigned  progress;
 		volatile uint8_t status;
-	HANDLE headerDataWritten;
+//	HANDLE headerDataWritten;
 	int in_progress;
+	int timeout_count;
 
-		void sendHeaderData(HANDLE* events, int evNum, unsigned frameSize, unsigned framesQty);
-		void runThisRequest();
-		unsigned pingChannelProc();
+
 };
 
 #endif /* SERVER_REQUEST_H_ */
