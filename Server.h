@@ -8,7 +8,7 @@
 #ifndef SERVER_SERVER_H_
 
 #define SERVER_SERVER_H_
-#define _WIN32_IE 0x0500
+
 #include <iostream>
 #include <Shlobj.h>
 #include <string>
@@ -22,13 +22,7 @@
 #include "Request.h"
 enum {MAX_REQ_NUM=10};
 
-/*
-typedef struct {
-	uint32_t width, height;
-	uint8_t type;
-	char fname_in[MAX_PATH],fname_out[MAX_PATH];
-}RequestData;
-*/
+
 class Server : public  LoggerEngine {
 public:
 	virtual ~Server();
@@ -39,8 +33,6 @@ public:
 	void static stopServer();
 	void stopThisServer();
 	void logPtr(std::string& tag, std::string msg, unsigned ptr);
-//	static void logPtr(std::string msg,  unsigned ptr);
-
 private:
 	Server();
 	Server(const Server&) = delete;

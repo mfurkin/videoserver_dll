@@ -240,7 +240,7 @@ std::string Server::getLogFName(LoggerEngine* logger_ptr) {
 		result= "";
 	else {
 		static char res[MAX_PATH];
-		getLogPathProc((char*)res,(char*)SERVER_LOG_DIR_NAME.c_str(),SERVER_LOG_FILE_NAME.c_str(),logger_ptr);
+		getLogPathProc((char*)res,(char*)SERVER_LOG_DIR_NAME.c_str(),(void*)logger_ptr);
 		result = std::string(res);
 	}
 	return result;
