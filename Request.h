@@ -35,7 +35,9 @@ class Request {
 		static void setServerPtr(Server* aServerPtr);
 		virtual ~Request();
 	private:
+		void log(std::string msg);
 		void logPtr(std::string msg, unsigned ptr);
+		void logString(std::string msg, std::string msg2);
 		int waitDataRequest(volatile int& req_rcvd);
 		void sendHeaderData(unsigned frameSize, unsigned framesQty);
 		void runThisRequest();
@@ -46,9 +48,7 @@ class Request {
 		static Server* server_ptr;
 		std::string  pingName;													// pingName - имя shared memory для пинга сервера
 		BOOL inited;															// успешно проинициализировано
-//		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
 		LARGE_INTEGER fileSize;
-//		HANDLE hMapSource,pingReq,pingNotify,destFileAccess,writeRequest;
 		HANDLE hMapSource,pingReq,pingNotify,writeCompleted,writeEnabled;		// hSourceFile - исходный файл
 		unsigned short conv_type,width,height;									// conv_type - вид преобразования
 																				// hPingChannel - shared memory для пинга

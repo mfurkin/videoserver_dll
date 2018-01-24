@@ -14,10 +14,10 @@
 #include "LumaWriter.h"
 #include "YUV420format.h"
 
-enum {numOfThreads=3,END_INDEX=4};
+enum {NUM_OF_THREADS=3,END_INDEX=4};
 class YUV420toYUV422Converter: public YUV420toSomethingConverter {
 public:
-	YUV420toYUV422Converter();
+	YUV420toYUV422Converter(LoggerEngine* aLoggerPtr);
 	virtual ~YUV420toYUV422Converter();
 private:
 	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);

@@ -7,10 +7,9 @@
 
 #include "Converter.h"
 HANDLE Converter::endFlag;
-// Converter::Converter(uint8_t* aSourcePtr, uint8_t* aDestPtr, unsigned short aWidth, unsigned short aHeight):source_ptr(aSourcePtr), dest_ptr(aDestPtr),width(aWidth),height(aHeight) {
-Converter::Converter() {
+std::string Converter::CONVERTER_TAG="Converter";
+Converter::Converter(LoggerEngine* aLoggerPtr):logger_ptr(aLoggerPtr) {
 }
-
 
 Converter::~Converter() {
 }
@@ -18,10 +17,25 @@ Converter::~Converter() {
 void Converter::setEndFlag(HANDLE anEndFlag) {
 	endFlag = anEndFlag;
 }
-/*
-void Converter::convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight) {
-	unsigned long size = getDestSize(aWidth,aHeight);
-	memcpy(aDest,&size,sizeof(unsigned long));
-	convertThis(aSource,aDest+sizeof(unsigned long),aWidth,aHeight);
+
+unsigned Converter::waitForEvents(HANDLE* events, int threadsNum) {
+	int i,numOfThreads = threadsNum+1;
+	HANDLE* allEvents = new HANDLE [numOfThreads];
+	unsigned result;
+	for (i=0;i<threadsNum;i++)
+		allEvents[i] = events[i];
+	allEvents[threadsNum] = endFlag;
+	result = WaitForMultipleObjectsEx(numOfThreads,allEvents,FALSE,INFINITE,TRUE);
+	delete [] allEvents;
+	return result;
 }
-*/
+
+void Converter::log(std::string msg) {
+	if (logger_ptr)
+		(*logger_ptr).log(CONVERTER_TAG,msg);
+}
+
+void Converter::logPtr(std::string msg, unsigned ptr) {
+	if (logger_ptr)
+		(*logger_ptr).logPtr(CONVERTER_TAG,msg,ptr);
+}

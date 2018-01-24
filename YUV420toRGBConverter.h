@@ -13,7 +13,7 @@
 
 class YUV420toRGBConverter: public YUV420toSomethingConverter {
 public:
-	YUV420toRGBConverter();
+	YUV420toRGBConverter(LoggerEngine* aLoggerPtr);
 	virtual ~YUV420toRGBConverter();
 private:
 	void convert(uint8_t* aSource, uint8_t* aDest, unsigned short aWidth, unsigned short aHeight);

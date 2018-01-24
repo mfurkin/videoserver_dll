@@ -11,7 +11,7 @@
 #include "YUV420format.h"
 class YUV420toSomethingConverter : public Converter{
 public:
-	YUV420toSomethingConverter();
+	YUV420toSomethingConverter(LoggerEngine* aLoggerPtr);
 	unsigned long getSourceSize(unsigned short width, unsigned short height);
 	virtual ~YUV420toSomethingConverter();
 };

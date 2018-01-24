@@ -32,7 +32,9 @@ public:
 	void static startServer();
 	void static stopServer();
 	void stopThisServer();
+	void log(std::string& tag,  std::string msg);
 	void logPtr(std::string& tag, std::string msg, unsigned ptr);
+	void logString(std::string& tag, std::string msg, std::string& msg2);
 private:
 	Server();
 	Server(const Server&) = delete;
@@ -43,8 +45,6 @@ private:
 	void initLogger();
 	void createLogger(std::string& name, std::string& fname);
 	void deleteLogger(std::string& name);
-	void log(std::string& tag,  std::string msg);
-	void logString(std::string& tag, std::string msg, std::string& msg2);
 	void checkSynchro(HANDLE synchro);
 	void checkMutex(HANDLE mutex);
 	void checkEvent(HANDLE event);

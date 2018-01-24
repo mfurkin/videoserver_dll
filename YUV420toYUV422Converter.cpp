@@ -7,16 +7,16 @@
 
 #include "YUV420toYUV422Converter.h"
 
-YUV420toYUV422Converter::YUV420toYUV422Converter() {
+YUV420toYUV422Converter::YUV420toYUV422Converter(LoggerEngine* aLoggerPtr):YUV420toSomethingConverter(aLoggerPtr) {
 }
 
 void YUV420toYUV422Converter::convert(uint8_t* source, uint8_t* dest, unsigned short width, unsigned short height) {
-	std::cerr<<"YUV420toYUV422Converter::convert enter\n";
+	log("YUV420toYUV422Converter::convert enter");
 	int size = width*height;
 //	int newSize = 2*size;
 	unsigned result,i=0;
 	int thread_count;
-	HANDLE LumaWriteCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),events[4],ChromaticRedCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),
+	HANDLE LumaWriteCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),events[3],ChromaticRedCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),
 		   ChromaticBlueCompleted = CreateEvent(NULL,FALSE,FALSE,NULL);
 	LumaWriter* lumaWriter_ptr = new LumaWriter(source,dest,size,getLumaDelta(),getLumaOffset(),LumaWriteCompleted);
 	ChromaWriter* chromaBlueWriter_ptr = new ChromaWriter(getBluePtr(source,width,height),dest,width,height,getBlueOffset(),
@@ -30,25 +30,19 @@ void YUV420toYUV422Converter::convert(uint8_t* source, uint8_t* dest, unsigned s
 	events[0] = LumaWriteCompleted;
 	events[1] = ChromaticRedCompleted;
 	events[2] = ChromaticBlueCompleted;
-	events[3] = endFlag;
-/*
-	for (;(result = WaitForMultipleObjectsEx(numOfThreads,events,FALSE,INFINITE,TRUE)) && ((result == END_INDEX+WAIT_OBJECT_0) || (--thread_count));){
-	}
-*/
-	std::cerr<<"YUV420toYUV422Converter::convert pt1\n";
+	log("YUV420toYUV422Converter::convert pt1");
 	switch(i) {
 		for (;((result != END_INDEX+WAIT_OBJECT_0) && (--thread_count));) {
 			case 0:
-				std::cerr<<"YUV420toYUV422Converter::convert pt2 thread_count="<<thread_count<<"\n";
-			result = WaitForMultipleObjectsEx(numOfThreads,events,FALSE,INFINITE,TRUE);
-			std::cerr<<"YUV420toYUV422Converter::convert pt3 thread_count="<<thread_count<<"\n";
+				logPtr("YUV420toYUV422Converter::convert pt2 thread_count=",thread_count);
+			result = waitForEvents(events,NUM_OF_THREADS);
+			logPtr("YUV420toYUV422Converter::convert pt3 thread_count=",thread_count);
 		}
 	}
-	std::cerr<<"YUV420toYUV422Converter::convert pt4\n";
-	delete lumaWriter_ptr;
+	log("YUV420toYUV422Converter::convert pt4");
 	delete chromaBlueWriter_ptr;
 	delete chromaRedWriter_ptr;
-	std::cerr<<"YUV420toYUV422Converter::convert exit\n";
+	log("YUV420toYUV422Converter::convert exit");
 }
 
 YUV420toYUV422Converter::~YUV420toYUV422Converter() {

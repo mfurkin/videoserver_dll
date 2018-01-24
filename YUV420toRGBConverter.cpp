@@ -7,13 +7,14 @@
 
 #include "YUV420toRGBConverter.h"
 
-YUV420toRGBConverter::YUV420toRGBConverter (){
+YUV420toRGBConverter::YUV420toRGBConverter (LoggerEngine* aLoggerPtr):YUV420toSomethingConverter(aLoggerPtr) {
 }
 
 YUV420toRGBConverter::~YUV420toRGBConverter() {
 }
 
 void YUV420toRGBConverter::convert(uint8_t* source, uint8_t* dest, unsigned short width, unsigned short height) {
+
 }
 
 unsigned long YUV420toRGBConverter::getDestSize(unsigned short width, unsigned short height) {

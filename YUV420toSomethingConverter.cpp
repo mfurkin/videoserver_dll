@@ -7,7 +7,7 @@
 
 #include "YUV420toSomethingConverter.h"
 
-YUV420toSomethingConverter::YUV420toSomethingConverter() {
+YUV420toSomethingConverter::YUV420toSomethingConverter(LoggerEngine* aLoggerPtr):Converter(aLoggerPtr) {
 }
 
 YUV420toSomethingConverter::~YUV420toSomethingConverter() {
