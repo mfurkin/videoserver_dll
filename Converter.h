@@ -11,6 +11,7 @@
 #include <wtypes.h>
 #include <stdint.h>
 #include "LoggerEngine.h"
+// enum {COLORS_NUM=3};
 class Converter {
 public:
 	Converter(LoggerEngine* aLoggerPtr);

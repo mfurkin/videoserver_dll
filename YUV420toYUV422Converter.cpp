@@ -7,13 +7,12 @@
 
 #include "YUV420toYUV422Converter.h"
 
-YUV420toYUV422Converter::YUV420toYUV422Converter(LoggerEngine* aLoggerPtr):YUV420toSomethingConverter(aLoggerPtr) {
+YUV420toYUV422Converter::YUV420toYUV422Converter(LoggerEngine* aLoggerPtr):Converter(aLoggerPtr) {
 }
 
 void YUV420toYUV422Converter::convert(uint8_t* source, uint8_t* dest, unsigned short width, unsigned short height) {
 	log("YUV420toYUV422Converter::convert enter");
 	int size = width*height;
-//	int newSize = 2*size;
 	unsigned result,i=0;
 	int thread_count;
 	HANDLE LumaWriteCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),events[3],ChromaticRedCompleted = CreateEvent(NULL,FALSE,FALSE,NULL),
@@ -35,8 +34,8 @@ void YUV420toYUV422Converter::convert(uint8_t* source, uint8_t* dest, unsigned s
 		for (;((result != END_INDEX+WAIT_OBJECT_0) && (--thread_count));) {
 			case 0:
 				logPtr("YUV420toYUV422Converter::convert pt2 thread_count=",thread_count);
-			result = waitForEvents(events,NUM_OF_THREADS);
-			logPtr("YUV420toYUV422Converter::convert pt3 thread_count=",thread_count);
+				result = waitForEvents(events,NUM_OF_THREADS);
+				logPtr("YUV420toYUV422Converter::convert pt3 thread_count=",thread_count);
 		}
 	}
 	log("YUV420toYUV422Converter::convert pt4");
@@ -77,6 +76,10 @@ uint8_t* YUV420toYUV422Converter::getRedPtr(uint8_t* pic, unsigned short width,
 
 uint8_t* YUV420toYUV422Converter::getFirstChromaticArea(uint8_t* pic, unsigned short width, unsigned short height) {
 	return pic + YUV420format::getFirstChromaticAreaOffset(width,height);
+}
+
+unsigned long YUV420toYUV422Converter::getSourceSize(unsigned short width, unsigned short height) {
+	return YUV420format::getSecondChromaticAreaOffset(width,height)+width*height;
 }
 
 unsigned long YUV420toYUV422Converter::getDestSize(unsigned short aWidth, unsigned short aHeight) {

@@ -27,7 +27,7 @@ unsigned ChromaWriter::writeThisChroma() {
 	logString("writeThisChroma enter ",colorName);
 	if (flag) {
 		unsigned short i,j;
-		unsigned width2 = width / 2,  height1 = height - 1;
+		unsigned width2 = width >> 1,  height1 = height - 1;
 		uint8_t* d_ptr = dest_ptr+offset;
 
 		for(i=0;i++<height1;)
